@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Wumber, serverless score tracking.
+
+Globals:
+  Function:
+    Timeout: 5
+    Runtime: go1.x
+    Tracing: Active
+    MemorySize: 128
+    Environment:
+      Variables:
+        WORKSPACE_TABLE: 
+          Ref: WorkspaceTable
+    Tags:
+      AppName: 
+        Ref: ProjectName
+
+Parameters:
+
+  Enviroment: 
+    Type: String
+    Default: uat
+    AllowedValues: 
+      - prod
+      - uat
+    Description: Please specify the enviroment.
+
+  ProjectName:
+    Type: String
+    Description: Please the name of the project.
+  
+Resources:
+  WumberAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt WumberUserPool.Arn
+            
+  CreateWorkspaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Attempts to create a Workspace in the database, fails if it already exists.
+      CodeUri: bin/
+      Handler: create-workspace
+      Runtime: go1.x
+      Tracing: Active
+      Tags:
+        API: Workspace
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /workspace
+            Method: POST
+            RestApiId:
+              Ref: WumberAPI
+            Auth:
+              Authorizer: NONE
+
+  WorkspaceTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: !Sub ${ProjectName}-${Enviroment}-Works
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+
+  WumberUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      EmailVerificationMessage: 'Please click the link below to verify your email address. {####} '
+      EmailVerificationSubject: Your verification link
+      DeviceConfiguration:
+        ChallengeRequiredOnNewDevice: true
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          RequireLowercase: false
+          RequireSymbols: false
+          RequireNumbers: true
+          MinimumLength: 8
+          RequireUppercase: true
+      UserPoolTags:
+        AppName: 
+          Ref: ProjectName
+
+
+Outputs:
+  WumberBooksAPI:
+    Description: "API endpoint URL for Prod environment"
+    Value: !Sub 'https://${WumberAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
+
+  CognitoURL:
+    Description: "API endpoint URL for Prod environment"
+    Value: !GetAtt WumberUserPool.ProviderURL
+
+    
