@@ -15,7 +15,7 @@ Globals:
     Tags:
       AppName:
         Ref: ProjectName
-    Timeout: 5
+    Timeout: 15
     Tracing: Active
 Outputs:
   CognitoURL:
@@ -42,7 +42,7 @@ Parameters:
 Resources:
   CreateWorkspaceFunction:
     Properties:
-      CodeUri: s3://wumber/a28e7bce85d6b869af9c63f61950d83d
+      CodeUri: s3://wumber/63d0b9317bf95f0852a0d94ae792b415
       Description: Attempts to create a Workspace in the database, fails if it already
         exists.
       Events:

@@ -5,7 +5,7 @@ Description: >
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 15
     Runtime: go1.x
     Tracing: Active
     MemorySize: 128

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"wumber/dynamodb"
 	"wumber/pkg/workspace"
@@ -57,13 +58,15 @@ func (f *createWorkspaceLambda) handler(ctx context.Context, req events.APIGatew
 
 func main() {
 	var (
-		table = os.Getenv("WORKSPACE_TABLE")
+		table  = os.Getenv("WORKSPACE_TABLE")
+		logger = log.New(os.Stdout, "[Workspace API] ", log.LstdFlags)
 	)
+
 	c := dynamodb.NewClient(table)
 
 	s := workspace.NewService(c)
-	function := createWorkspaceLambda{
-		wsService: s,
-	}
+	s = workspace.WrapWithLogging(logger, s)
+
+	function := createWorkspaceLambda{wsService: s}
 	lambda.Start(function.handler)
 }
