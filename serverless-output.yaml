@@ -42,7 +42,7 @@ Parameters:
 Resources:
   CreateWorkspaceFunction:
     Properties:
-      CodeUri: s3://wumber/63d0b9317bf95f0852a0d94ae792b415
+      CodeUri: s3://wumber/0bcb99112c43b9be08df73b83346e84d
       Description: Attempts to create a Workspace in the database, fails if it already
         exists.
       Events:

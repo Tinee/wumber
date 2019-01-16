@@ -5,6 +5,8 @@ import (
 	"time"
 	"wumber"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+
 	"github.com/aws/aws-xray-sdk-go/xray"
 
 	"github.com/google/uuid"
@@ -67,11 +69,14 @@ func (c *Client) CreateWorkspace(ctx context.Context, name string) (wumber.Works
 		},
 	})
 	if err != nil {
-		if err.Error() == dynamodb.ErrCodeConditionalCheckFailedException {
-			return "", ErrWorkspaceNameExists
+		if awserr, ok := err.(awserr.Error); ok {
+			switch awserr.Code() {
+			case dynamodb.ErrCodeConditionalCheckFailedException:
+				return "", ErrWorkspaceNameExists
+			default:
+				return "", ErrUnexpectedCause
+			}
 		}
-		return "", ErrUnexpectedCause
 	}
-
 	return id, nil
 }
