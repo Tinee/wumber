@@ -6,6 +6,8 @@ Globals:
   Function:
     Environment:
       Variables:
+        REGION:
+          Fn::Sub: ${AWS::Region}
         WORKSPACE_TABLE:
           Ref: WorkspaceTable
     MemorySize: 128
@@ -40,7 +42,9 @@ Parameters:
 Resources:
   CreateWorkspaceFunction:
     Properties:
-      CodeUri: s3://wumber/89a250a7b155b12f04f3721ad64dd2a6
+      CodeUri: s3://wumber/a28e7bce85d6b869af9c63f61950d83d
+      Description: Attempts to create a Workspace in the database, fails if it already
+        exists.
       Events:
         CatchAll:
           Properties:
@@ -52,6 +56,10 @@ Resources:
               Ref: WumberAPI
           Type: Api
       Handler: create-workspace
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: WorkspaceTable
       Runtime: go1.x
       Tags:
         API: Workspace
@@ -71,7 +79,7 @@ Resources:
       - AttributeName: SK
         KeyType: RANGE
       TableName:
-        Fn::Sub: ${ProjectName}-${Enviroment}-Works
+        Fn::Sub: ${ProjectName}-${Enviroment}-WorkspaceTable
     Type: AWS::DynamoDB::Table
   WumberAPI:
     Properties:
