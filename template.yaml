@@ -32,17 +32,58 @@ Parameters:
     Description: Please the name of the project.
   
 Resources:
+
+  ApiGatewayAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "apigateway.amazonaws.com"
+            Action: 
+              - sts:AssumeRole
+      Policies: 
+        - PolicyName: "InvokeAuthorizerFunction"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action:
+                  - lambda:InvokeAsync
+                  - lambda:InvokeFunction
+                Resource: !Sub ${JWTAuthFunction.Arn}
+
   WumberAPI:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
-      Cors: "'*'"
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"  
       Auth:
-        DefaultAuthorizer: CognitoAuthorizer
+        DefaultAuthorizer: TestAuthorizer
         Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn: !GetAtt WumberUserPool.Arn
-            
+          TestAuthorizer:
+            FunctionPayloadType: TOKEN
+            FunctionArn: !GetAtt JWTAuthFunction.Arn
+            Identity:
+              Headers: Authorization
+              # ValidationExpression: ^Bearer [-0-9a-zA-Z\._]*$
+              ReauthorizeEvery: 30 # seconds
+
+  JWTAuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Testing
+      CodeUri: bin/
+      Handler: jwt-auth
+      Runtime: go1.x
+      Tracing: Active
+          
   CreateWorkspaceFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -102,6 +143,7 @@ Resources:
       UserPoolTags:
         AppName: 
           Ref: ProjectName
+          
   WumberUserPoolClient:
     Type: "AWS::Cognito::UserPoolClient"
     Description: "App Client to the frontend."

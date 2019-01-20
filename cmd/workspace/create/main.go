@@ -22,12 +22,13 @@ type requestBody struct {
 }
 
 type response struct {
-	ID string `json:"id"`
+	CreatedWorkspaceID string `json:"id"`
 }
 
 func (f *createWorkspaceLambda) handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	data := requestBody{}
-	accountID := req.RequestContext.Identity.AccountID
+	accountID := req.RequestContext.Authorizer["principalId"].(string)
+
 	err := json.Unmarshal([]byte(req.Body), &data)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
@@ -46,9 +47,7 @@ func (f *createWorkspaceLambda) handler(ctx context.Context, req events.APIGatew
 		}, nil
 	}
 
-	response := response{ID: string(id)}
-	bs, _ := json.Marshal(response)
-
+	bs, _ := json.Marshal(response{CreatedWorkspaceID: string(id)})
 	return events.APIGatewayProxyResponse{
 		Headers:    map[string]string{"Content-type": "application/json"},
 		Body:       string(bs),
