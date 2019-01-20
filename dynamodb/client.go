@@ -43,7 +43,7 @@ type createWorkspaceRecord struct {
 
 // CreateWorkspace take a workspace and tries to insert it into Dynamodb.
 // If the name already exists it will fail.
-func (c *Client) CreateWorkspace(ctx context.Context, name string) (wumber.WorkspaceID, error) {
+func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (wumber.WorkspaceID, error) {
 	id := wumber.WorkspaceID(uuid.New().String())
 	record := createWorkspaceRecord{
 		RecordType:    "workspaces",
@@ -52,6 +52,7 @@ func (c *Client) CreateWorkspace(ctx context.Context, name string) (wumber.Works
 			ID:      id,
 			Name:    name,
 			Created: time.Now(),
+			OwnerID: accountID,
 		},
 	}
 

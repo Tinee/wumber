@@ -6,7 +6,7 @@ import (
 )
 
 type Service interface {
-	Create(ctx context.Context, name string) (wumber.WorkspaceID, error)
+	Create(ctx context.Context, name, accountID string) (wumber.WorkspaceID, error)
 }
 
 type service struct {
@@ -19,11 +19,11 @@ func NewService(r wumber.WorkspaceRepository) Service {
 	}
 }
 
-func (s *service) Create(ctx context.Context, name string) (wumber.WorkspaceID, error) {
-	if name == "" {
+func (s *service) Create(ctx context.Context, name, accountID string) (wumber.WorkspaceID, error) {
+	if name == "" || accountID == "" {
 		return "", ErrInvalidArgument
 	}
-	id, err := s.wsRepo.CreateWorkspace(ctx, name)
+	id, err := s.wsRepo.CreateWorkspace(ctx, name, accountID)
 	if err != nil {
 		return "", err
 	}

@@ -64,8 +64,6 @@ Resources:
             Method: POST
             RestApiId:
               Ref: WumberAPI
-            Auth:
-              Authorizer: NONE
 
   WorkspaceTable:
       Type: AWS::DynamoDB::Table
@@ -104,6 +102,16 @@ Resources:
       UserPoolTags:
         AppName: 
           Ref: ProjectName
+  WumberUserPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Description: "App Client to the frontend."
+    Properties:
+      ClientName: !Sub ${ProjectName}-${Enviroment}-client
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - USER_PASSWORD_AUTH
+      UserPoolId:
+        Ref: WumberUserPool
 
 
 Outputs:

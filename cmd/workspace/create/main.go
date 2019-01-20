@@ -18,7 +18,7 @@ type createWorkspaceLambda struct {
 }
 
 type requestBody struct {
-	Name string `json:"name"`
+	WorkspaceName string `json:"workspaceName"`
 }
 
 type response struct {
@@ -27,7 +27,7 @@ type response struct {
 
 func (f *createWorkspaceLambda) handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	data := requestBody{}
-
+	accountID := req.RequestContext.Identity.AccountID
 	err := json.Unmarshal([]byte(req.Body), &data)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
@@ -37,7 +37,7 @@ func (f *createWorkspaceLambda) handler(ctx context.Context, req events.APIGatew
 		}, nil
 	}
 
-	id, err := f.wsService.Create(ctx, data.Name)
+	id, err := f.wsService.Create(ctx, data.WorkspaceName, accountID)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			Headers:    map[string]string{"Content-type": "plain/text"},

@@ -7,7 +7,8 @@ import (
 
 // Workspace represents a workspace where user in this workspace can keep track of their scores.
 type Workspace struct {
-	ID      WorkspaceID `dynamodbav:"ID"`
+	ID      WorkspaceID `dynamodbav:"Id"`
+	OwnerID string      `dynamodbav:"OwnerId"`
 	Name    string      `dynamodbav:"Name"`
 	Created time.Time   `dynamodbav:"Created"`
 }
@@ -15,5 +16,5 @@ type Workspace struct {
 type WorkspaceID string
 
 type WorkspaceRepository interface {
-	CreateWorkspace(ctx context.Context, name string) (WorkspaceID, error)
+	CreateWorkspace(ctx context.Context, name, accountID string) (WorkspaceID, error)
 }
