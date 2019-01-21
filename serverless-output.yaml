@@ -6,10 +6,12 @@ Globals:
   Function:
     Environment:
       Variables:
+        ENVIRONMENT:
+          Fn::Sub: ${Environment}
         REGION:
           Fn::Sub: ${AWS::Region}
-        WORKSPACE_TABLE:
-          Ref: WorkspaceTable
+        WUMBER_TABLE:
+          Ref: WumberTable
     MemorySize: 128
     Runtime: go1.x
     Tags:
@@ -18,18 +20,12 @@ Globals:
     Timeout: 15
     Tracing: Active
 Outputs:
-  CognitoURL:
-    Description: API endpoint URL for Prod environment
-    Value:
-      Fn::GetAtt:
-      - WumberUserPool
-      - ProviderURL
   WumberBooksAPI:
     Description: API endpoint URL for Prod environment
     Value:
       Fn::Sub: https://${WumberAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/
 Parameters:
-  Enviroment:
+  Environment:
     AllowedValues:
     - prod
     - uat
@@ -40,16 +36,37 @@ Parameters:
     Description: Please the name of the project.
     Type: String
 Resources:
+  ApiGatewayAuthorizerRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+        Version: '2012-10-17'
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - lambda:InvokeAsync
+            - lambda:InvokeFunction
+            Effect: Allow
+            Resource:
+              Fn::Sub: ${JWTAuthFunction.Arn}
+          Version: '2012-10-17'
+        PolicyName: InvokeAuthorizerFunction
+    Type: AWS::IAM::Role
   CreateWorkspaceFunction:
     Properties:
-      CodeUri: s3://wumber/0bcb99112c43b9be08df73b83346e84d
+      CodeUri: s3://wumber/0d2d61f2f37fce015a7df4b65a87530d
       Description: Attempts to create a Workspace in the database, fails if it already
         exists.
       Events:
         CatchAll:
           Properties:
-            Auth:
-              Authorizer: NONE
             Method: POST
             Path: /workspace
             RestApiId:
@@ -59,13 +76,65 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName:
-            Ref: WorkspaceTable
+            Ref: WumberTable
       Runtime: go1.x
       Tags:
         API: Workspace
       Tracing: Active
     Type: AWS::Serverless::Function
-  WorkspaceTable:
+  JWTAuthFunction:
+    Properties:
+      CodeUri: s3://wumber/0d2d61f2f37fce015a7df4b65a87530d
+      Description: Validates the JWT that sends up in the Authorization header, also
+        passes down the userID as the principalId.
+      Handler: jwt-auth
+      Runtime: go1.x
+      Tracing: Active
+    Type: AWS::Serverless::Function
+  RegisterUserFunction:
+    Properties:
+      CodeUri: s3://wumber/0d2d61f2f37fce015a7df4b65a87530d
+      Description: Attempts to register a user, it'll fail if the email already exists.
+      Events:
+        CatchAll:
+          Properties:
+            Auth:
+              Authorizer: NONE
+            Method: POST
+            Path: /user
+            RestApiId:
+              Ref: WumberAPI
+          Type: Api
+      Handler: user-register
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: WumberTable
+      Runtime: go1.x
+      Tags:
+        API: User
+      Tracing: Active
+    Type: AWS::Serverless::Function
+  WumberAPI:
+    Properties:
+      Auth:
+        Authorizers:
+          TestAuthorizer:
+            FunctionArn:
+              Fn::GetAtt:
+              - JWTAuthFunction
+              - Arn
+            FunctionPayloadType: TOKEN
+            Identity:
+              ReauthorizeEvery: 30
+        DefaultAuthorizer: TestAuthorizer
+      Cors:
+        AllowHeaders: '''*'''
+        AllowMethods: '''*'''
+        AllowOrigin: '''*'''
+      StageName: Prod
+    Type: AWS::Serverless::Api
+  WumberTable:
     Properties:
       AttributeDefinitions:
       - AttributeName: PK
@@ -79,41 +148,6 @@ Resources:
       - AttributeName: SK
         KeyType: RANGE
       TableName:
-        Fn::Sub: ${ProjectName}-${Enviroment}-WorkspaceTable
+        Fn::Sub: ${ProjectName}-${Environment}-Wumber
     Type: AWS::DynamoDB::Table
-  WumberAPI:
-    Properties:
-      Auth:
-        Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn:
-              Fn::GetAtt:
-              - WumberUserPool
-              - Arn
-        DefaultAuthorizer: CognitoAuthorizer
-      Cors: '''*'''
-      StageName: Prod
-    Type: AWS::Serverless::Api
-  WumberUserPool:
-    Properties:
-      AutoVerifiedAttributes:
-      - email
-      DeviceConfiguration:
-        ChallengeRequiredOnNewDevice: true
-      EmailVerificationMessage: 'Please click the link below to verify your email
-        address. {####} '
-      EmailVerificationSubject: Your verification link
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 8
-          RequireLowercase: false
-          RequireNumbers: true
-          RequireSymbols: false
-          RequireUppercase: true
-      UserPoolTags:
-        AppName:
-          Ref: ProjectName
-      UsernameAttributes:
-      - email
-    Type: AWS::Cognito::UserPool
 Transform: AWS::Serverless-2016-10-31

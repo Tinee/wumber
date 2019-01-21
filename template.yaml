@@ -11,15 +11,16 @@ Globals:
     MemorySize: 128
     Environment:
       Variables:
-        WORKSPACE_TABLE: !Ref WorkspaceTable
+        WUMBER_TABLE: !Ref WumberTable
         REGION: !Sub ${AWS::Region}
+        ENVIRONMENT: !Sub ${Environment}
     Tags:
       AppName: 
         Ref: ProjectName
 
 Parameters:
 
-  Enviroment: 
+  Environment: 
     Type: String
     Default: uat
     AllowedValues: 
@@ -78,7 +79,7 @@ Resources:
   JWTAuthFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Testing
+      Description: Validates the JWT that sends up in the Authorization header, also passes down the userID as the principalId.
       CodeUri: bin/
       Handler: jwt-auth
       Runtime: go1.x
@@ -92,7 +93,7 @@ Resources:
       Handler: create-workspace
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref WorkspaceTable
+            TableName: !Ref WumberTable
       Runtime: go1.x
       Tracing: Active
       Tags:
@@ -114,7 +115,7 @@ Resources:
       Handler: user-register
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref WorkspaceTable
+            TableName: !Ref WumberTable
       Runtime: go1.x
       Tracing: Active
       Tags:
@@ -130,10 +131,10 @@ Resources:
             Auth:
               Authorizer: NONE
 
-  WorkspaceTable:
+  WumberTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: !Sub ${ProjectName}-${Enviroment}-WorkspaceTable
+        TableName: !Sub ${ProjectName}-${Environment}-Wumber
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: PK
@@ -146,47 +147,7 @@ Resources:
           - AttributeName: SK
             KeyType: RANGE
 
-  WumberUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      EmailVerificationMessage: 'Please click the link below to verify your email address. {####} '
-      EmailVerificationSubject: Your verification link
-      DeviceConfiguration:
-        ChallengeRequiredOnNewDevice: true
-      AutoVerifiedAttributes:
-        - email
-      UsernameAttributes:
-        - email
-      Policies:
-        PasswordPolicy:
-          RequireLowercase: false
-          RequireSymbols: false
-          RequireNumbers: true
-          MinimumLength: 8
-          RequireUppercase: true
-      UserPoolTags:
-        AppName: 
-          Ref: ProjectName
-          
-  WumberUserPoolClient:
-    Type: "AWS::Cognito::UserPoolClient"
-    Description: "App Client to the frontend."
-    Properties:
-      ClientName: !Sub ${ProjectName}-${Enviroment}-client
-      GenerateSecret: false
-      ExplicitAuthFlows:
-        - USER_PASSWORD_AUTH
-      UserPoolId:
-        Ref: WumberUserPool
-
-
 Outputs:
   WumberBooksAPI:
     Description: "API endpoint URL for Prod environment"
     Value: !Sub 'https://${WumberAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
-
-  CognitoURL:
-    Description: "API endpoint URL for Prod environment"
-    Value: !GetAtt WumberUserPool.ProviderURL
-
-    

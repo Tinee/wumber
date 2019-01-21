@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"wumber/dynamodb"
+	"wumber/logger"
 	"wumber/pkg/user"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -51,8 +51,9 @@ func (f *RegisterUserLambda) handler(ctx context.Context, req events.APIGatewayP
 
 func main() {
 	var (
-		table  = os.Getenv("WORKSPACE_TABLE")
-		logger = log.New(os.Stdout, "[User API] ", log.LstdFlags)
+		env    = os.Getenv("ENVIRONMENT")
+		table  = os.Getenv("WUMBER_TABLE")
+		logger = logger.NewLogger(env, os.Stdout)
 	)
 
 	c := dynamodb.NewClient(table)
