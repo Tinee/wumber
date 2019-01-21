@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
+	"wumber"
 	"wumber/dynamodb"
 	"wumber/logger"
 	"wumber/pkg/workspace"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/pkg/errors"
 )
 
 type createWorkspaceLambda struct {
@@ -33,25 +36,35 @@ func (f *createWorkspaceLambda) handler(ctx context.Context, req events.APIGatew
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			Headers:    map[string]string{"Content-type": "plain/text"},
-			Body:       fmt.Sprintf("Error: %s", err),
-			StatusCode: 400,
+			Body:       fmt.Sprintf("Error: not valid JSON."),
+			StatusCode: http.StatusUnprocessableEntity,
 		}, nil
 	}
 
 	id, err := f.wsService.Create(ctx, data.WorkspaceName, accountID)
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			Headers:    map[string]string{"Content-type": "plain/text"},
-			Body:       fmt.Sprintf("Error: %s", err),
-			StatusCode: 400,
-		}, nil
+		switch errors.Cause(err) {
+		case wumber.ErrCreatingWorkspaceNameExists:
+			return events.APIGatewayProxyResponse{
+				Headers:    map[string]string{"Content-type": "plain/text"},
+				Body:       fmt.Sprintf("Error: %s", err),
+				StatusCode: http.StatusBadRequest,
+			}, nil
+		default:
+			return events.APIGatewayProxyResponse{
+				Headers:    map[string]string{"Content-type": "plain/text"},
+				Body:       fmt.Sprintf("Error: %s", err),
+				StatusCode: http.StatusInternalServerError,
+			}, nil
+		}
+
 	}
 
 	bs, _ := json.Marshal(response{CreatedWorkspaceID: string(id)})
 	return events.APIGatewayProxyResponse{
 		Headers:    map[string]string{"Content-type": "application/json"},
 		Body:       string(bs),
-		StatusCode: 200,
+		StatusCode: http.StatusOK,
 	}, nil
 }
 

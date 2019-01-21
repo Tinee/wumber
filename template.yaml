@@ -12,7 +12,6 @@ Globals:
     Environment:
       Variables:
         WUMBER_TABLE: !Ref WumberTable
-        REGION: !Sub ${AWS::Region}
         ENVIRONMENT: !Sub ${Environment}
     Tags:
       AppName: 

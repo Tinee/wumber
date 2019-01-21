@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"net/http"
 	"os"
+	"wumber"
 	"wumber/dynamodb"
 	"wumber/logger"
 	"wumber/pkg/user"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/pkg/errors"
 )
 
 type RegisterUserLambda struct {
@@ -27,25 +29,37 @@ func (f *RegisterUserLambda) handler(ctx context.Context, req events.APIGatewayP
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			Headers:    map[string]string{"Content-type": "plain/text"},
-			Body:       fmt.Sprintf("Error: %s", err),
-			StatusCode: 400,
+			Body:       "Error: not valid JSON.",
+			StatusCode: http.StatusUnprocessableEntity,
 		}, nil
 	}
 
 	jwt, err := f.userService.Register(ctx, data)
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			Headers:    map[string]string{"Content-type": "plain/text"},
-			Body:       fmt.Sprintf("Error: %s", err),
-			StatusCode: 400,
-		}, nil
+		switch errors.Cause(err) {
+		case wumber.ErrRegisterUserEmailExists:
+			return events.APIGatewayProxyResponse{
+				Headers:    map[string]string{"Content-type": "plain/text"},
+				Body:       "Error: Workspace name already exists.",
+				StatusCode: http.StatusBadGateway,
+			}, nil
+
+		default:
+			return events.APIGatewayProxyResponse{
+				Headers:    map[string]string{"Content-type": "plain/text"},
+				Body:       "Error: Unexpected error.",
+				StatusCode: http.StatusInternalServerError,
+			}, nil
+		}
 	}
 
-	bs, _ := json.Marshal(Response{AccessToken: string(jwt)})
+	bs, _ := json.Marshal(Response{
+		AccessToken: string(jwt),
+	})
 	return events.APIGatewayProxyResponse{
 		Headers:    map[string]string{"Content-type": "application/json"},
 		Body:       string(bs),
-		StatusCode: 200,
+		StatusCode: http.StatusOK,
 	}, nil
 }
 

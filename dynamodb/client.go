@@ -5,6 +5,8 @@ import (
 	"time"
 	"wumber"
 
+	"github.com/pkg/errors"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-xray-sdk-go/xray"
@@ -20,18 +22,18 @@ import (
 
 // Client wraps Dynamodb, have methods to interact with AWS.
 type Client struct {
-	dynamo         *dynamodb.DynamoDB
-	workspaceTable string
+	dynamo *dynamodb.DynamoDB
+	table  string
 }
 
 //NewClient sets up a session with the AWS backend and return a fully fledged client that can handle DynamoDB operations.
-func NewClient(workspaceTable string) *Client {
+func NewClient(table string) *Client {
 	svc := dynamodb.New(session.Must(session.NewSession()))
 	xray.AWS(svc.Client)
 
 	return &Client{
-		dynamo:         svc,
-		workspaceTable: workspaceTable,
+		dynamo: svc,
+		table:  table,
 	}
 }
 
@@ -63,7 +65,7 @@ func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (w
 
 	_, err = c.dynamo.PutItemWithContext(ctx, &dynamodb.PutItemInput{
 		Item:                av,
-		TableName:           aws.String(c.workspaceTable),
+		TableName:           aws.String(c.table),
 		ConditionExpression: aws.String("attribute_not_exists(#n)"),
 		ExpressionAttributeNames: map[string]*string{
 			"#n": aws.String("Name"),
@@ -73,9 +75,9 @@ func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (w
 		if awserr, ok := err.(awserr.Error); ok {
 			switch awserr.Code() {
 			case dynamodb.ErrCodeConditionalCheckFailedException:
-				return "", ErrWorkspaceNameExists
+				return "", errors.WithMessage(wumber.ErrCreatingWorkspaceNameExists, "Workspace name seem to be taken.")
 			default:
-				return "", ErrUnexpectedCause
+				return "", err
 			}
 		}
 	}
@@ -83,8 +85,8 @@ func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (w
 }
 
 type registerUserRecord struct {
-	RecordType string `dynamodbav:"PK"`
-	UserID     string `dynamodbav:"SK"`
+	EmailKey   string `dynamodbav:"PK"`
+	RecordType string `dynamodbav:"SK"`
 	wumber.User
 }
 
@@ -96,8 +98,8 @@ func (c *Client) Register(ctx context.Context, u wumber.User) (wumber.User, erro
 	u.ID = id
 
 	av, err := dynamodbattribute.MarshalMap(&registerUserRecord{
-		RecordType: "users",
-		UserID:     string(id),
+		EmailKey:   u.Email,
+		RecordType: "identity",
 		User:       u,
 	})
 	if err != nil {
@@ -106,7 +108,7 @@ func (c *Client) Register(ctx context.Context, u wumber.User) (wumber.User, erro
 
 	_, err = c.dynamo.PutItemWithContext(ctx, &dynamodb.PutItemInput{
 		Item:                av,
-		TableName:           aws.String(c.workspaceTable),
+		TableName:           aws.String(c.table),
 		ConditionExpression: aws.String("attribute_not_exists(#e)"),
 		ExpressionAttributeNames: map[string]*string{
 			"#e": aws.String("Email"),
@@ -116,7 +118,7 @@ func (c *Client) Register(ctx context.Context, u wumber.User) (wumber.User, erro
 		if awserr, ok := err.(awserr.Error); ok {
 			switch awserr.Code() {
 			case dynamodb.ErrCodeConditionalCheckFailedException:
-				return wumber.User{}, ErrUserEmailExists
+				return wumber.User{}, errors.WithMessage(wumber.ErrRegisterUserEmailExists, "Email is taken.")
 			default:
 				return wumber.User{}, err
 			}
