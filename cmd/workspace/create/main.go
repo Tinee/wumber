@@ -41,7 +41,10 @@ func (f *createWorkspaceLambda) handler(ctx context.Context, req events.APIGatew
 		}, nil
 	}
 
-	id, err := f.wsService.Create(ctx, data.WorkspaceName, accountID)
+	id, err := f.wsService.Create(ctx, workspace.CreateWorkspaceInput{
+		OwnerID:       accountID,
+		WorkspaceName: data.WorkspaceName,
+	})
 	if err != nil {
 		switch errors.Cause(err) {
 		case wumber.ErrCreatingWorkspaceNameExists:
@@ -73,8 +76,9 @@ func main() {
 		env    = os.Getenv("ENVIRONMENT")
 		table  = os.Getenv("WUMBER_TABLE")
 		logger = logger.NewLogger(env, os.Stdout)
-		c      = dynamodb.NewClient(table)
 	)
+	c := dynamodb.NewClient(table)
+	c = dynamodb.WithTracing(c)
 
 	s := workspace.NewService(c)
 	s = workspace.WrapWithLogging(logger, s)

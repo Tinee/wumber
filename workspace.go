@@ -18,5 +18,5 @@ type WorkspaceID string
 
 // WorkspaceRepository is an interface that can store users.
 type WorkspaceRepository interface {
-	CreateWorkspace(ctx context.Context, name, accountID string) (WorkspaceID, error)
+	CreateWorkspace(ctx context.Context, w Workspace) (WorkspaceID, error)
 }

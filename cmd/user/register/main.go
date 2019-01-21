@@ -40,8 +40,8 @@ func (f *RegisterUserLambda) handler(ctx context.Context, req events.APIGatewayP
 		case wumber.ErrRegisterUserEmailExists:
 			return events.APIGatewayProxyResponse{
 				Headers:    map[string]string{"Content-type": "plain/text"},
-				Body:       "Error: Workspace name already exists.",
-				StatusCode: http.StatusBadGateway,
+				Body:       "Error: User email already exists.",
+				StatusCode: http.StatusBadRequest,
 			}, nil
 
 		default:
@@ -71,6 +71,7 @@ func main() {
 	)
 
 	c := dynamodb.NewClient(table)
+	c = dynamodb.WithTracing(c)
 
 	s := user.NewService(c, "dev")
 	s = user.WrapWithLogging(logger, s)

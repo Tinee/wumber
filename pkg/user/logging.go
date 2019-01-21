@@ -27,7 +27,7 @@ func (s *loggingService) Register(ctx context.Context, input RegisterUserInput) 
 		if err != nil {
 			s.logger.WithFields(log.Fields{
 				"took": time.Since(begin),
-			}).WithError(err).Error("Called Register and got an error.")
+			}).WithError(err).Error("Failed to create the User.")
 			return
 		}
 
@@ -35,7 +35,7 @@ func (s *loggingService) Register(ctx context.Context, input RegisterUserInput) 
 			"input":  input,
 			"output": jwt,
 			"took":   time.Since(begin),
-		}).Debug("Called Register.")
+		}).Debug("Successfully created the User.")
 	}(time.Now())
 
 	return s.next.Register(ctx, input)

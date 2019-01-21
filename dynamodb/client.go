@@ -37,6 +37,12 @@ func NewClient(table string) *Client {
 	}
 }
 
+// WithTracing wraps the underlaying DynamoDB client with xray tracing.
+func WithTracing(c *Client) *Client {
+	xray.AWS(c.dynamo.Client)
+	return c
+}
+
 type createWorkspaceRecord struct {
 	RecordType    string `dynamodbav:"PK"`
 	WorkspaceName string `dynamodbav:"SK"`
@@ -45,17 +51,13 @@ type createWorkspaceRecord struct {
 
 // CreateWorkspace takes a workspace and tries to insert it into Dynamodb.
 // If the name already exists it will fail.
-func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (wumber.WorkspaceID, error) {
-	id := wumber.WorkspaceID(uuid.New().String())
+func (c *Client) CreateWorkspace(ctx context.Context, w wumber.Workspace) (wumber.WorkspaceID, error) {
+	w.ID = wumber.WorkspaceID(uuid.New().String())
+	w.Created = time.Now()
 	record := createWorkspaceRecord{
 		RecordType:    "workspaces",
-		WorkspaceName: name,
-		Workspace: wumber.Workspace{
-			ID:      id,
-			Name:    name,
-			Created: time.Now(),
-			OwnerID: accountID,
-		},
+		WorkspaceName: w.Name,
+		Workspace:     w,
 	}
 
 	av, err := dynamodbattribute.MarshalMap(&record)
@@ -81,7 +83,7 @@ func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (w
 			}
 		}
 	}
-	return id, nil
+	return w.ID, nil
 }
 
 type registerUserRecord struct {

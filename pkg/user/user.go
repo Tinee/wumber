@@ -46,11 +46,11 @@ func (s *service) Register(ctx context.Context, input RegisterUserInput) (JWT, e
 
 	user, err := s.userRepo.Register(ctx, u)
 	if err != nil {
-		return "", errors.Wrapf(err, "error when register the user: %+v", user)
+		return "", errors.Wrap(err, "error when register the user")
 	}
 	jwt, err := s.extractJWT(user)
 	if err != nil {
-		return "", errors.Wrapf(err, "error extracting the token from the user: %+v", user)
+		return "", errors.Wrap(err, "error extracting the token from the user")
 	}
 
 	return jwt, nil
