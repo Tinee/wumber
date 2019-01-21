@@ -30,17 +30,3 @@ func (s *service) Create(ctx context.Context, name, accountID string) (wumber.Wo
 
 	return id, nil
 }
-
-// func validateAuthor(a wumberbooks.Author) error {
-// 	var errs []string
-// 	if a.FirstName == "" {
-// 		errs = append(errs, "firstName can't be empty.")
-// 	}
-// 	if a.LastName == "" {
-// 		errs = append(errs, "lastName can't be empty.")
-// 	}
-// 	if len(errs) > 0 {
-// 		return errors.New(strings.Join(errs, " and "))
-// 	}
-// 	return nil
-// }

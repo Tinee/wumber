@@ -13,8 +13,10 @@ type Workspace struct {
 	Created time.Time   `dynamodbav:"Created"`
 }
 
+// WorkspaceID is an ID that identifies workspaces.
 type WorkspaceID string
 
+// WorkspaceRepository is an interface that can store users.
 type WorkspaceRepository interface {
 	CreateWorkspace(ctx context.Context, name, accountID string) (WorkspaceID, error)
 }

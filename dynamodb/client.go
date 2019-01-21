@@ -41,7 +41,7 @@ type createWorkspaceRecord struct {
 	wumber.Workspace
 }
 
-// CreateWorkspace take a workspace and tries to insert it into Dynamodb.
+// CreateWorkspace takes a workspace and tries to insert it into Dynamodb.
 // If the name already exists it will fail.
 func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (wumber.WorkspaceID, error) {
 	id := wumber.WorkspaceID(uuid.New().String())
@@ -80,4 +80,48 @@ func (c *Client) CreateWorkspace(ctx context.Context, name, accountID string) (w
 		}
 	}
 	return id, nil
+}
+
+type registerUserRecord struct {
+	RecordType string `dynamodbav:"PK"`
+	UserID     string `dynamodbav:"SK"`
+	wumber.User
+}
+
+// Register takes a user and tries to insert it into Dynamodb.
+// If the email already exists it will fail.
+func (c *Client) Register(ctx context.Context, u wumber.User) (wumber.User, error) {
+	id := wumber.UserID(uuid.New().String())
+	u.Created = time.Now()
+	u.ID = id
+
+	av, err := dynamodbattribute.MarshalMap(&registerUserRecord{
+		RecordType: "users",
+		UserID:     string(id),
+		User:       u,
+	})
+	if err != nil {
+		return wumber.User{}, err
+	}
+
+	_, err = c.dynamo.PutItemWithContext(ctx, &dynamodb.PutItemInput{
+		Item:                av,
+		TableName:           aws.String(c.workspaceTable),
+		ConditionExpression: aws.String("attribute_not_exists(#e)"),
+		ExpressionAttributeNames: map[string]*string{
+			"#e": aws.String("Email"),
+		},
+	})
+	if err != nil {
+		if awserr, ok := err.(awserr.Error); ok {
+			switch awserr.Code() {
+			case dynamodb.ErrCodeConditionalCheckFailedException:
+				return wumber.User{}, ErrUserEmailExists
+			default:
+				return wumber.User{}, err
+			}
+		}
+	}
+
+	return u, nil
 }

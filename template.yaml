@@ -71,7 +71,7 @@ Resources:
             FunctionPayloadType: TOKEN
             FunctionArn: !GetAtt JWTAuthFunction.Arn
             Identity:
-              Headers: Authorization
+              # Headers: Authorization
               # ValidationExpression: ^Bearer [-0-9a-zA-Z\._]*$
               ReauthorizeEvery: 30 # seconds
 
@@ -105,6 +105,30 @@ Resources:
             Method: POST
             RestApiId:
               Ref: WumberAPI
+
+  RegisterUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Attempts to register a user, it'll fail if the email already exists.
+      CodeUri: bin/
+      Handler: user-register
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WorkspaceTable
+      Runtime: go1.x
+      Tracing: Active
+      Tags:
+        API: User
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /user
+            Method: POST
+            RestApiId:
+              Ref: WumberAPI
+            Auth:
+              Authorizer: NONE
 
   WorkspaceTable:
       Type: AWS::DynamoDB::Table
