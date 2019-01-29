@@ -12,13 +12,11 @@ type Service interface {
 type service struct {
 	userRepo   wumber.UserRepository
 	jwtService wumber.JWTService
-	secret     wumber.JWTSecret
 }
 
-func NewService(r wumber.UserRepository, jwt wumber.JWTService, secret wumber.JWTSecret) Service {
+func NewService(r wumber.UserRepository, jwt wumber.JWTService) Service {
 	return &service{
 		userRepo:   r,
-		secret:     secret,
 		jwtService: jwt,
 	}
 }

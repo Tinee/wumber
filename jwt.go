@@ -8,5 +8,5 @@ type JWTSecret string
 
 // JWTService is a representation how a JWTService.
 type JWTService interface {
-	Extract(User, JWTSecret) (JWT, error)
+	Extract(User) (JWT, error)
 }

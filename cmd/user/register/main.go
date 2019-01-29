@@ -7,6 +7,7 @@ import (
 	"os"
 	"wumber"
 	"wumber/dynamodb"
+	"wumber/jwt"
 	"wumber/logger"
 	"wumber/pkg/user"
 
@@ -73,7 +74,9 @@ func main() {
 	c := dynamodb.NewClient(table)
 	c = dynamodb.WithTracing(c)
 
-	s := user.NewService(c, "dev")
+	jwt := jwt.New("dev")
+
+	s := user.NewService(c, jwt)
 	s = user.WrapWithLogging(logger, s)
 
 	function := RegisterUserLambda{userService: s}

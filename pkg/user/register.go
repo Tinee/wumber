@@ -32,7 +32,7 @@ func (s *service) Register(ctx context.Context, input RegisterUserInput) (wumber
 	if err != nil {
 		return "", errors.Wrap(err, "error when register the user")
 	}
-	jwt, err := s.jwtService.Extract(user, s.secret)
+	jwt, err := s.jwtService.Extract(user)
 	if err != nil {
 		return "", errors.Wrap(err, "error extracting the token from the user")
 	}
