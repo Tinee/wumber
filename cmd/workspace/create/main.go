@@ -75,7 +75,7 @@ func main() {
 	var (
 		env    = os.Getenv("ENVIRONMENT")
 		table  = os.Getenv("WUMBER_TABLE")
-		logger = logger.NewLogger(env, os.Stdout)
+		logger = logger.NewAWSLogger(env)
 	)
 	c := dynamodb.NewClient(table)
 	c = dynamodb.WithTracing(c)

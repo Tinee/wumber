@@ -1,57 +1,49 @@
 package logger
 
 import (
-	"io"
+	"context"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
-// Logger wraps logrus logger.
 type Logger struct {
-	*log.Logger
+	*zap.SugaredLogger
+	contextMappers []ContextValueMapperFunc
 }
+
+// Debug wraps a third party logger, it adds metadata from the context into the error logs.
+func (l *Logger) Error(ctx context.Context, msg string, args ...interface{}) {
+	args = append(args, l.applyContextMappers(ctx)...)
+	l.With(args...).Error(msg)
+}
+
+// Debug wraps a third party logger, it adds metadata from the context into the debug logs.
+func (l *Logger) Debug(ctx context.Context, msg string, args ...interface{}) {
+	args = append(args, l.applyContextMappers(ctx)...)
+	l.With(args...).Debug(msg)
+}
+
+// Flush flushes any buffered log entries.
+func (l *Logger) Flush() error { return l.Sync() }
 
 // NewLogger determines by looking at the environment, which level the logger should log with.
 // If the environment isn't set it will default to a Developer logger.
-func NewLogger(env string, wr io.Writer) *Logger {
-	logger := &Logger{
-		Logger: &log.Logger{
-			Out: wr,
-		},
-	}
-
+func NewLogger(env string, funcs ...ContextValueMapperFunc) *Logger {
+	var logger *zap.Logger
 	switch strings.ToLower(env) {
-	case "uat":
-		setupUATLogger(logger)
+	case "uat", "dev":
+		logger, _ = zap.NewDevelopment()
 	case "prod":
-		setupPRODLogger(logger)
-	case "dev":
-		setupDEVLogger(logger)
+		logger, _ = zap.NewProduction()
 	default:
-		setupDEVLogger(logger)
+		logger, _ = zap.NewProduction()
 	}
 
-	return logger
+	return &Logger{SugaredLogger: logger.Sugar(), contextMappers: funcs}
 }
 
-func setupUATLogger(l *Logger) {
-	l.SetFormatter(&log.JSONFormatter{})
-	l.SetLevel(log.DebugLevel)
-	l.SetReportCaller(true)
-}
-
-func setupPRODLogger(l *Logger) {
-	l.SetFormatter(&log.JSONFormatter{})
-	l.SetLevel(log.ErrorLevel)
-}
-
-func setupDEVLogger(l *Logger) {
-	l.SetFormatter(&log.TextFormatter{
-		DisableTimestamp: true,
-		ForceColors:      true,
-		QuoteEmptyFields: true,
-	})
-	l.SetLevel(log.TraceLevel)
-	l.SetReportCaller(true)
+// NewAWSLogger is a shortcut for logger.NewLogger("dev", logger.AWSRequestID)
+func NewAWSLogger(env string) *Logger {
+	return NewLogger(env, AWSRequestID)
 }

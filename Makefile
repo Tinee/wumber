@@ -5,6 +5,9 @@ deps:
 
 clean: 
 	rm -rf ./hello-world/hello-world
+
+local: 
+	sam local start-api --env-vars env.development.json
 	
 build:
 	GOOS=linux GOARCH=amd64 go build -o ./bin/create-workspace ./cmd/workspace/create 

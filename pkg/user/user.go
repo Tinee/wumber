@@ -69,8 +69,8 @@ func (u RegisterUserInput) toUser() (wumber.User, error) {
 	}
 
 	return wumber.User{
-		FirstName: strings.ToLower(u.FirstName),
-		LastName:  strings.ToLower(u.LastName),
+		FirstName: strings.ToTitle(strings.TrimSpace(u.FirstName)),
+		LastName:  strings.ToTitle(strings.TrimSpace(u.LastName)),
 		Email:     strings.ToLower(u.Email),
 		Password:  u.Password,
 	}, nil

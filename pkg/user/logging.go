@@ -3,39 +3,39 @@ package user
 import (
 	"context"
 	"time"
-	"wumber/logger"
-
-	log "github.com/sirupsen/logrus"
+	"wumber"
 )
 
 type loggingService struct {
-	logger *logger.Logger
+	logger wumber.Logger
 	next   Service
 }
 
 // WrapWithLogging wraps an WorkspaceService and logs the outputs.
-func WrapWithLogging(logger *logger.Logger, s Service) Service {
+func WrapWithLogging(logger wumber.Logger, s Service) Service {
 	return &loggingService{logger, s}
 }
 
 func (s *loggingService) Register(ctx context.Context, input RegisterUserInput) (jwt JWT, err error) {
-	s.logger.WithFields(log.Fields{
-		"input": input,
-	}).Debug("Calling Register.")
-
+	defer s.logger.Flush()
+	s.logger.Debug(ctx, "Calling Register",
+		"input", input,
+	)
 	defer func(begin time.Time) {
 		if err != nil {
-			s.logger.WithFields(log.Fields{
-				"took": time.Since(begin),
-			}).WithError(err).Error("Failed to create the User.")
+			s.logger.Error(ctx, "Failed to call Register.",
+				"input", input,
+				"err", err,
+				"took", time.Since(begin),
+			)
 			return
 		}
 
-		s.logger.WithFields(log.Fields{
-			"input":  input,
-			"output": jwt,
-			"took":   time.Since(begin),
-		}).Debug("Successfully created the User.")
+		s.logger.Debug(ctx, "Called Register",
+			"input", input,
+			"output", jwt,
+			"took", time.Since(begin),
+		)
 	}(time.Now())
 
 	return s.next.Register(ctx, input)

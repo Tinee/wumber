@@ -4,40 +4,37 @@ import (
 	"context"
 	"time"
 	"wumber"
-	"wumber/logger"
-
-	logrus "github.com/sirupsen/logrus"
 )
 
 type loggingService struct {
-	logger *logger.Logger
+	logger wumber.Logger
 	next   Service
 }
 
 // WrapWithLogging wraps an WorkspaceService and logs the outputs.
-func WrapWithLogging(logger *logger.Logger, s Service) Service {
+func WrapWithLogging(logger wumber.Logger, s Service) Service {
 	return &loggingService{logger, s}
 }
 
 func (s *loggingService) Create(ctx context.Context, input CreateWorkspaceInput) (id wumber.WorkspaceID, err error) {
-	s.logger.WithFields(logrus.Fields{
-		"input": input,
-	}).Debug("Calling Create")
-
+	defer s.logger.Flush()
+	s.logger.Debug(ctx, "Calling Create",
+		"input", input,
+	)
 	defer func(begin time.Time) {
 		if err != nil {
-			s.logger.WithFields(logrus.Fields{
-				"input": input,
-				"took":  time.Since(begin),
-			}).WithError(err).Error("Error when calling Create")
+			s.logger.Error(ctx, "Error when calling Create",
+				"input", input,
+				"took", time.Since(begin),
+			)
 			return
 		}
 
-		s.logger.WithFields(logrus.Fields{
-			"input":  input,
-			"output": id,
-			"took":   time.Since(begin),
-		}).Debug("Successfully created the Workspace.")
+		s.logger.Debug(ctx, "Successfully created the Workspace",
+			"input", input,
+			"output", id,
+			"took", time.Since(begin),
+		)
 	}(time.Now())
 	return s.next.Create(ctx, input)
 }
