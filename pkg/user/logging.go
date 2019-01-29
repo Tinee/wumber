@@ -16,7 +16,7 @@ func WrapWithLogging(logger wumber.Logger, s Service) Service {
 	return &loggingService{logger, s}
 }
 
-func (s *loggingService) Register(ctx context.Context, input RegisterUserInput) (jwt JWT, err error) {
+func (s *loggingService) Register(ctx context.Context, input RegisterUserInput) (jwt wumber.JWT, err error) {
 	defer s.logger.Flush()
 	s.logger.Debug(ctx, "Calling Register",
 		"input", input,

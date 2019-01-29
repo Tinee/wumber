@@ -13,18 +13,20 @@ import (
 )
 
 type Service interface {
-	Register(context.Context, RegisterUserInput) (JWT, error)
+	Register(context.Context, RegisterUserInput) (wumber.JWT, error)
 }
 
 type service struct {
-	userRepo wumber.UserRepository
-	secret   string
+	userRepo   wumber.UserRepository
+	jwtService wumber.JWTService
+	secret     wumber.JWTSecret
 }
 
-func NewService(r wumber.UserRepository, secret string) Service {
+func NewService(r wumber.UserRepository, jwt wumber.JWTService, secret wumber.JWTSecret) Service {
 	return &service{
-		userRepo: r,
-		secret:   secret,
+		userRepo:   r,
+		secret:     secret,
+		jwtService: jwt,
 	}
 }
 
@@ -36,7 +38,7 @@ type RegisterUserInput struct {
 	Password  string `json:"password"`
 }
 
-func (s *service) Register(ctx context.Context, input RegisterUserInput) (JWT, error) {
+func (s *service) Register(ctx context.Context, input RegisterUserInput) (wumber.JWT, error) {
 	u, err := input.toUser()
 	if err != nil {
 		return "", errors.Wrap(err, "error converting the input to an user.")
@@ -48,7 +50,7 @@ func (s *service) Register(ctx context.Context, input RegisterUserInput) (JWT, e
 	if err != nil {
 		return "", errors.Wrap(err, "error when register the user")
 	}
-	jwt, err := s.extractJWT(user)
+	jwt, err := s.jwtService.Extract(user, s.secret)
 	if err != nil {
 		return "", errors.Wrap(err, "error extracting the token from the user")
 	}
