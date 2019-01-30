@@ -13,9 +13,9 @@ Globals:
       Variables:
         WUMBER_TABLE: !Ref WumberTable
         ENVIRONMENT: !Sub ${Environment}
+        USER_TOPIC: !Ref WumberUserTopic
     Tags:
-      AppName: 
-        Ref: ProjectName
+      AppName: !Ref ProjectName
 
 Parameters:
 
@@ -59,7 +59,7 @@ Resources:
   WumberAPI:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: Prod
+      StageName: !Ref Environment
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'*'"
@@ -71,9 +71,7 @@ Resources:
             FunctionPayloadType: TOKEN
             FunctionArn: !GetAtt JWTAuthFunction.Arn
             Identity:
-              # Headers: Authorization
-              # ValidationExpression: ^Bearer [-0-9a-zA-Z\._]*$
-              ReauthorizeEvery: 30 # seconds
+              ReauthorizeEvery: 30
 
   JWTAuthFunction:
     Type: AWS::Serverless::Function
@@ -115,6 +113,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref WumberTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt WumberUserTopic.TopicName
       Runtime: go1.x
       Tracing: Active
       Tags:
@@ -131,22 +131,64 @@ Resources:
               Authorizer: NONE
 
   WumberTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: !Sub ${ProjectName}-${Environment}-Wumber
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: PK
-            AttributeType: S
-          - AttributeName: SK
-            AttributeType: S
-        KeySchema:
-          - AttributeName: PK
-            KeyType: HASH
-          - AttributeName: SK
-            KeyType: RANGE
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ProjectName}-${Environment}-Wumber
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  WumberUserCreatedQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      QueueName: !Sub ${Environment}-${ProjectName}-user-created-queue
+      VisibilityTimeout: 30
+      Tags:
+        - Key: AppName
+          Value: !Ref ProjectName
+
+  WumberUserTopic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: !Sub ${Environment}-${ProjectName}-user-topic
+
+  WumberUserTopicSubscription:
+    Type: 'AWS::SNS::Subscription'
+    Properties:
+      TopicArn: !Ref WumberUserTopic
+      Endpoint: !GetAtt WumberUserCreatedQueue.Arn
+      Protocol: sqs
+      RawMessageDelivery: true
+      FilterPolicy:
+          action:
+            - created
+  WumberSQSPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      PolicyDocument: 
+        Version: '2012-10-17'
+        Statement:
+          - Sid: MySQSPolicy001
+            Effect: Allow
+            Principal: "*"
+            Action: sqs:SendMessage
+            Resource: !GetAtt WumberUserCreatedQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref WumberUserTopic
+      Queues:
+        - !Ref WumberUserCreatedQueue
 
 Outputs:
   WumberBooksAPI:
     Description: "API endpoint URL for Prod environment"
-    Value: !Sub 'https://${WumberAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
+    Value: !Sub 'https://${WumberAPI}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/'

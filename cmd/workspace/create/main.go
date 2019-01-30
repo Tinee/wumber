@@ -78,7 +78,6 @@ func main() {
 		logger = logger.NewAWSLogger(env)
 	)
 	c := dynamodb.NewClient(table)
-	c = dynamodb.WithTracing(c)
 
 	s := workspace.NewService(c)
 	s = workspace.WrapWithLogging(logger, s)

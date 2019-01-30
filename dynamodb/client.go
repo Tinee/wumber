@@ -27,20 +27,13 @@ type Client struct {
 }
 
 //NewClient sets up a session with the AWS backend and return a fully fledged client that can handle DynamoDB operations.
-func NewClient(table string) *Client {
+func NewClient(table string) wumber.Storage {
 	svc := dynamodb.New(session.Must(session.NewSession()))
 	xray.AWS(svc.Client)
-
 	return &Client{
 		dynamo: svc,
 		table:  table,
 	}
-}
-
-// WithTracing wraps the underlaying DynamoDB client with xray tracing.
-func WithTracing(c *Client) *Client {
-	xray.AWS(c.dynamo.Client)
-	return c
 }
 
 type createWorkspaceRecord struct {

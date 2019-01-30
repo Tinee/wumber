@@ -22,3 +22,8 @@ type UserID string
 type UserRepository interface {
 	Register(ctx context.Context, user User) (User, error)
 }
+
+// UserEmitter is a domain interface that describes something that will emit events for user purposes.
+type UserEmitter interface {
+	EmitCreate(ctx context.Context, new User) error
+}

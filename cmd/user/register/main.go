@@ -10,6 +10,7 @@ import (
 	"wumber/jwt"
 	"wumber/logger"
 	"wumber/pkg/user"
+	"wumber/sns"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -66,13 +67,15 @@ func (f *RegisterUserLambda) handler(ctx context.Context, req events.APIGatewayP
 
 func main() {
 	var (
-		env    = os.Getenv("ENVIRONMENT")
-		table  = os.Getenv("WUMBER_TABLE")
-		logger = logger.NewAWSLogger(env)
+		env       = os.Getenv("ENVIRONMENT")
+		table     = os.Getenv("WUMBER_TABLE")
+		userTopic = os.Getenv("USER_TOPIC")
+		logger    = logger.NewAWSLogger(env)
 	)
+	emitter := sns.New(userTopic)
 
 	c := dynamodb.NewClient(table)
-	c = dynamodb.WithTracing(c)
+	c = dynamodb.WrapWithEmitter(emitter, c)
 
 	jwt := jwt.New("dev")
 
@@ -80,5 +83,6 @@ func main() {
 	s = user.WrapWithLogging(logger, s)
 
 	function := RegisterUserLambda{userService: s}
+
 	lambda.Start(function.handler)
 }
