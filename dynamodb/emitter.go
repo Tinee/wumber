@@ -2,7 +2,6 @@ package dynamodb
 
 import (
 	"context"
-	"fmt"
 	"wumber"
 )
 
@@ -22,8 +21,7 @@ func (c *emitClient) Register(ctx context.Context, u wumber.User) (user wumber.U
 			return
 		}
 
-		err2 := c.emitter.EmitCreate(ctx, user)
-		fmt.Println(err2)
+		c.emitter.EmitCreate(ctx, user)
 	}()
 
 	return c.next.Register(ctx, u)

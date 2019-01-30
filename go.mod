@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.8
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e // indirect
+	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/go-ozzo/ozzo-validation v3.5.0+incompatible
 	github.com/google/uuid v1.1.0
 	github.com/pkg/errors v0.8.1

@@ -27,12 +27,16 @@ Parameters:
       - uat
     Description: Please specify the enviroment.
 
+  MixpanelToken: 
+    Type: String
+    NoEcho: true
+    Description: Please specify the enviroment.
+
   ProjectName:
     Type: String
     Description: Please the name of the project.
   
 Resources:
-
   ApiGatewayAuthorizerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -130,6 +134,24 @@ Resources:
             Auth:
               Authorizer: NONE
 
+  MixpanelUserRegisterTrackingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: When a user register we want to track that in Mixpanel. 
+      CodeUri: bin/
+      Handler: mixpanel-user-register
+      Runtime: go1.x
+      Tracing: Active
+      Environment:
+        Variables:
+          MIXPANEL_TOKEN: !Ref MixpanelToken
+      Events:
+        Queue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt WumberUserCreatedQueue.Arn
+            BatchSize: 10
+
   WumberTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -145,6 +167,7 @@ Resources:
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+
 
   WumberUserCreatedQueue:
     Type: AWS::SQS::Queue
